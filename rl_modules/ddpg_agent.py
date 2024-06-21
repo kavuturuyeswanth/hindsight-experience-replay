@@ -68,7 +68,7 @@ class ddpg_agent:
                     # reset the rollouts
                     ep_obs, ep_ag, ep_g, ep_actions = [], [], [], []
                     # reset the environment
-                    observation = self.env.reset()
+                    observation,_ = self.env.reset()
                     obs = observation['observation']
                     ag = observation['achieved_goal']
                     g = observation['desired_goal']
@@ -79,7 +79,7 @@ class ddpg_agent:
                             pi = self.actor_network(input_tensor)
                             action = self._select_actions(pi)
                         # feed the actions into the environment
-                        observation_new, _, _, info = self.env.step(action)
+                        observation_new, _, _,_, info = self.env.step(action)
                         obs_new = observation_new['observation']
                         ag_new = observation_new['achieved_goal']
                         # append rollouts
@@ -101,6 +101,7 @@ class ddpg_agent:
                 mb_ag = np.array(mb_ag)
                 mb_g = np.array(mb_g)
                 mb_actions = np.array(mb_actions)
+                
                 # store the episodes
                 self.buffer.store_episode([mb_obs, mb_ag, mb_g, mb_actions])
                 self._update_normalizer([mb_obs, mb_ag, mb_g, mb_actions])
@@ -161,6 +162,7 @@ class ddpg_agent:
         # pre process the obs and g
         transitions['obs'], transitions['g'] = self._preproc_og(obs, g)
         # update
+        #print("trainsitons['obs']: ",transitions['obs'])
         self.o_norm.update(transitions['obs'])
         self.g_norm.update(transitions['g'])
         # recompute the stats
@@ -237,7 +239,7 @@ class ddpg_agent:
         total_success_rate = []
         for _ in range(self.args.n_test_rollouts):
             per_success_rate = []
-            observation = self.env.reset()
+            observation,_ = self.env.reset()
             obs = observation['observation']
             g = observation['desired_goal']
             for _ in range(self.env_params['max_timesteps']):
@@ -246,7 +248,7 @@ class ddpg_agent:
                     pi = self.actor_network(input_tensor)
                     # convert the actions
                     actions = pi.detach().cpu().numpy().squeeze()
-                observation_new, _, _, info = self.env.step(actions)
+                observation_new, _, _,_, info = self.env.step(actions)
                 obs = observation_new['observation']
                 g = observation_new['desired_goal']
                 per_success_rate.append(info['is_success'])

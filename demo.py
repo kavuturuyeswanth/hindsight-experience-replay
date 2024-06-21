@@ -1,9 +1,44 @@
 import torch
 from rl_modules.models import actor
 from arguments import get_args
-import gym
+import gymnasium as gym
 import numpy as np
 
+from gymnasium.envs.registration import register
+import sys
+sys.path.append('/misis/project_multi_skill_rl/rl_skills/envs')
+import mujoco_UR3e_reach
+import ur3e_pick_and_place
+import mujoco_UR3e_slide
+import mujoco_UR3e_push
+
+for reward_type in ["sparse", "dense"]:
+    suffix = "Dense" if reward_type == "dense" else ""
+    register(
+        id=f"UR3eReach{suffix}-v1",
+        entry_point="mujoco_UR3e_reach:UR3eReachEnv",
+        kwargs={"reward_type": reward_type,},
+        max_episode_steps=50,
+        )
+
+    register(
+        id=f"UR3ePickAndPlace{suffix}-v1",
+        entry_point="ur3e_pick_and_place:MujocoUR3ePickAndPlaceEnv",
+        kwargs={"reward_type": reward_type, "render_mode": "human"},
+        max_episode_steps=50,
+        )
+    register(
+        id=f"UR3ePush{suffix}-v1",
+        entry_point="mujoco_UR3e_push:UR3ePushEnv",
+        kwargs={"reward_type": reward_type,},
+        max_episode_steps=50,
+        )        
+    register(
+        id=f"UR3eSlide{suffix}-v1",
+        entry_point="mujoco_UR3e_slide:UR3eSlideEnv",
+        kwargs={"reward_type": reward_type,},
+        max_episode_steps=50,
+        )
 # process the inputs
 def process_inputs(o, g, o_mean, o_std, g_mean, g_std, args):
     o_clip = np.clip(o, -args.clip_obs, args.clip_obs)
@@ -22,7 +57,7 @@ if __name__ == '__main__':
     # create the environment
     env = gym.make(args.env_name)
     # get the env param
-    observation = env.reset()
+    observation,_ = env.reset()
     # get the environment params
     env_params = {'obs': observation['observation'].shape[0], 
                   'goal': observation['desired_goal'].shape[0], 
@@ -34,7 +69,7 @@ if __name__ == '__main__':
     actor_network.load_state_dict(model)
     actor_network.eval()
     for i in range(args.demo_length):
-        observation = env.reset()
+        observation,_ = env.reset()
         # start to do the demo
         obs = observation['observation']
         g = observation['desired_goal']
@@ -45,6 +80,6 @@ if __name__ == '__main__':
                 pi = actor_network(inputs)
             action = pi.detach().numpy().squeeze()
             # put actions into the environment
-            observation_new, reward, _, info = env.step(action)
+            observation_new, reward, _,_, info = env.step(action)
             obs = observation_new['observation']
         print('the episode is: {}, is success: {}'.format(i, info['is_success']))

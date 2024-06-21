@@ -52,8 +52,15 @@ class normalizer:
         self.total_sum += sync_sum
         self.total_sumsq += sync_sumsq
         self.total_count += sync_count
+        
+        self.total_sumsq = self.total_sumsq.astype(np.float64)
+        self.total_count = self.total_count.astype(np.float64)
         # calculate the new mean and std
         self.mean = self.total_sum / self.total_count
+        #print("mean: ",self.mean)
+        #print("total sumq: ",np.shape(self.total_sumsq)[0])
+        #print("toal count: ",self.total_count)
+
         self.std = np.sqrt(np.maximum(np.square(self.eps), (self.total_sumsq / self.total_count) - np.square(self.total_sum / self.total_count)))
     
     # average across the cpu's data
